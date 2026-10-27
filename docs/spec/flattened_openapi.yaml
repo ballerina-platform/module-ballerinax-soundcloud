@@ -1,0 +1,3217 @@
+openapi: 3.0.4
+info:
+  title: SoundCloud Public API Specification
+  description: "Provides access to SoundCloud users, tracks, playlists, comments,\
+    \ likes, reposts and followings, so applications can browse, upload and manage\
+    \ audio content on behalf of authenticated users."
+  termsOfService: https://developers.soundcloud.com/docs/api/terms-of-use
+  contact:
+    name: API issue tracker
+    url: https://github.com/soundcloud/api
+  version: 1.0.0
+servers:
+- url: https://api.soundcloud.com
+security:
+- AuthHeader: []
+- oAuth2_1: []
+tags:
+- name: oauth
+  description: Authentication and Authorization Endpoints.
+- name: me
+  description: Own User Endpoints. Requires an access token obtained via the authorization_code
+    flow (resource owner required).
+- name: search
+  description: Search Endpoints. Supports access tokens from both authorization_code
+    and client_credentials flows.
+- name: playlists
+  description: Playlists Endpoints.
+- name: system-playlists
+  description: "System Playlists Endpoints (e.g. track stations, artist stations)."
+- name: tracks
+  description: Tracks Endpoints.
+- name: users
+  description: SoundCloud Users Endpoints.
+- name: likes
+  description: "Liking Tracks, Playlists & System Playlists (stations)."
+- name: reposts
+  description: Reposting Tracks & Playlists.
+- name: miscellaneous
+  description: Miscellaneous Endpoints.
+paths:
+  /me:
+    get:
+      tags:
+      - me
+      summary: Returns the authenticated user’s information.
+      responses:
+        "200":
+          $ref: "#/components/responses/Me"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /me/feed:
+    get:
+      tags:
+      - me
+      summary: Returns the authenticated user's feed.
+      parameters:
+      - $ref: "#/components/parameters/access"
+      - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          $ref: "#/components/responses/Activities"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /me/feed/tracks:
+    get:
+      tags:
+      - me
+      summary: Returns the authenticated user's recent track related feed.
+      parameters:
+      - $ref: "#/components/parameters/access"
+      - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          $ref: "#/components/responses/Activities"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /me/recently-played/tracks:
+    get:
+      tags:
+      - me
+      summary: Returns the authenticated user's last 25 recently played tracks.
+      description: "Returns up to 25 full track objects in reverse chronological order.\
+        \ Duplicate tracks are omitted, keeping only the most recent play. Tracks\
+        \ that are not visible to the caller are omitted. This endpoint does not support\
+        \ pagination or a `limit` query parameter."
+      parameters:
+      - $ref: "#/components/parameters/access_explicit"
+      responses:
+        "200":
+          $ref: "#/components/responses/Tracks"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /me/likes/tracks:
+    get:
+      tags:
+      - me
+      summary: Returns a list of favorited or liked tracks of the authenticated user.
+      parameters:
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/access_explicit"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Tracks"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /me/likes/playlists:
+    get:
+      tags:
+      - me
+      summary: Returns a list of favorited or liked playlists of the authenticated
+        user.
+      parameters:
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Playlists"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /me/likes/system-playlists:
+    get:
+      tags:
+      - me
+      summary: Returns a list of liked system playlists (stations) of the authenticated
+        user.
+      parameters:
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/SystemPlaylists"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /me/followings:
+    get:
+      tags:
+      - me
+      summary: Returns a list of users who are followed by the authenticated user.
+      parameters:
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/Users"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /me/followings/tracks:
+    get:
+      tags:
+      - me
+      summary: Returns a list of recent tracks from users followed by the authenticated
+        user.
+      parameters:
+      - $ref: "#/components/parameters/access"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/offset"
+      responses:
+        "200":
+          $ref: "#/components/responses/TracksList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /me/followings/{user_urn}:
+    put:
+      tags:
+      - me
+      summary: Follows a user.
+      description: "Fails with 422 when the user cannot be followed, for example when\
+        \ the authenticated user has reached the maximum number of followings. The\
+        \ response `message` states the reason."
+      parameters:
+      - $ref: "#/components/parameters/user_urn_to_follow"
+      responses:
+        "200":
+          $ref: "#/components/responses/Successful"
+        "201":
+          $ref: "#/components/responses/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+    delete:
+      tags:
+      - me
+      summary: Deletes a user who is followed by the authenticated user.
+      parameters:
+      - $ref: "#/components/parameters/user_urn_to_follow"
+      responses:
+        "200":
+          description: The user was unfollowed.
+          content:
+            application/json; charset=utf-8:
+              examples:
+                "200":
+                  $ref: "#/components/examples/OK"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /me/followers:
+    get:
+      tags:
+      - me
+      summary: Returns a list of users who are following the authenticated user.
+      parameters:
+      - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          $ref: "#/components/responses/Users"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /me/playlists:
+    get:
+      tags:
+      - me
+      summary: Returns user’s playlists (sets).
+      description: "Returns playlist info, playlist tracks and tracks owner info."
+      parameters:
+      - $ref: "#/components/parameters/show_tracks"
+      - $ref: "#/components/parameters/linked_partitioning"
+      - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          $ref: "#/components/responses/Playlists"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /me/tracks:
+    get:
+      tags:
+      - me
+      summary: Returns a list of the authenticated user's tracks.
+      parameters:
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/sort"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Tracks"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /me/reposts/tracks:
+    get:
+      tags:
+      - me
+      - reposts
+      summary: Returns a list of track reposts of the authenticated user.
+      parameters:
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/access_explicit"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Tracks"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /me/reposts/playlists:
+    get:
+      tags:
+      - me
+      - reposts
+      summary: Returns a list of playlist reposts of the authenticated user.
+      parameters:
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Playlists"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /tracks:
+    get:
+      tags:
+      - search
+      summary: Performs a track search based on a query
+      parameters:
+      - $ref: "#/components/parameters/q"
+      - $ref: "#/components/parameters/urns"
+      - $ref: "#/components/parameters/genres"
+      - $ref: "#/components/parameters/tags"
+      - $ref: "#/components/parameters/bpm"
+      - $ref: "#/components/parameters/duration"
+      - $ref: "#/components/parameters/created_at"
+      - $ref: "#/components/parameters/access"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/offset"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Tracks"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          description: Internal Server Error
+    post:
+      tags:
+      - tracks
+      summary: Uploads a new track.
+      requestBody:
+        description: Track metadata and the audio file to upload.
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/TracksBody"
+            examples:
+              default:
+                $ref: "#/components/examples/TrackDataRequest"
+          multipart/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/TracksBody1"
+      responses:
+        "201":
+          $ref: "#/components/responses/Track"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+  /playlists:
+    get:
+      tags:
+      - search
+      summary: Performs a playlist search based on a query
+      parameters:
+      - $ref: "#/components/parameters/q"
+      - $ref: "#/components/parameters/access"
+      - $ref: "#/components/parameters/show_tracks"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/offset"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Playlists"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags:
+      - playlists
+      summary: Creates a playlist.
+      requestBody:
+        description: Create Playlist request
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUpdatePlaylistRequest"
+            examples:
+              default:
+                $ref: "#/components/examples/CreateUpdatePlaylistRequest"
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/PlaylistsBody"
+            examples:
+              default:
+                $ref: "#/components/examples/CreateUpdatePlaylistFormRequest"
+      responses:
+        "201":
+          $ref: "#/components/responses/Playlist"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /users:
+    get:
+      tags:
+      - search
+      summary: Performs a user search based on a query
+      parameters:
+      - $ref: "#/components/parameters/q"
+      - $ref: "#/components/parameters/urns"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/offset"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Users"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /playlists/{playlist_urn}:
+    get:
+      tags:
+      - playlists
+      summary: Returns a playlist.
+      parameters:
+      - $ref: "#/components/parameters/playlist_urn"
+      - $ref: "#/components/parameters/secret_token"
+      - $ref: "#/components/parameters/access"
+      - $ref: "#/components/parameters/show_tracks"
+      responses:
+        "200":
+          $ref: "#/components/responses/Playlist"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    put:
+      tags:
+      - playlists
+      summary: Updates a playlist.
+      parameters:
+      - $ref: "#/components/parameters/fake_playlist_urn"
+      requestBody:
+        description: Playlist payload
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUpdatePlaylistRequest"
+            examples:
+              default:
+                $ref: "#/components/examples/CreateUpdatePlaylistRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/Playlist"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags:
+      - playlists
+      summary: Deletes a playlist.
+      parameters:
+      - $ref: "#/components/parameters/fake_playlist_urn"
+      responses:
+        "200":
+          description: Success
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /playlists/{playlist_urn}/tracks:
+    get:
+      tags:
+      - playlists
+      summary: Returns tracks under a playlist.
+      parameters:
+      - $ref: "#/components/parameters/playlist_urn"
+      - $ref: "#/components/parameters/secret_token"
+      - $ref: "#/components/parameters/access"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Tracks"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /playlists/{playlist_urn}/reposters:
+    get:
+      tags:
+      - playlists
+      summary: Returns a collection of playlist's reposters.
+      parameters:
+      - $ref: "#/components/parameters/playlist_urn"
+      - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          $ref: "#/components/responses/Users"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /tracks/{track_urn}:
+    get:
+      tags:
+      - tracks
+      summary: Returns a track.
+      parameters:
+      - $ref: "#/components/parameters/track_urn"
+      - $ref: "#/components/parameters/secret_token"
+      responses:
+        "200":
+          $ref: "#/components/responses/Track"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags:
+      - tracks
+      summary: Updates a track's information.
+      parameters:
+      - $ref: "#/components/parameters/track_urn"
+      requestBody:
+        description: Track payload
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrackMetadataRequest"
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/TrackUpdateFormRequest"
+          multipart/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/TrackUpdateFormRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/Track"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      tags:
+      - tracks
+      summary: Deletes a track.
+      parameters:
+      - $ref: "#/components/parameters/track_urn"
+      responses:
+        "200":
+          description: Success
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /tracks/{track_urn}/storefront:
+    put:
+      tags:
+      - tracks
+      summary: Creates or updates the storefront (Artist Storefront) of a track.
+      description: |
+        Creates or updates the storefront module shown on the track page. The request replaces
+        the whole storefront: optional fields (link_title, description, price) are cleared when
+        omitted, so always send every value the storefront should keep. The request fails with
+        403 when the authenticated user does not own the track, and also when the user does not
+        hold a creator subscription that includes external purchase options. The storefront
+        links to an external page — no payment is processed by SoundCloud.
+      parameters:
+      - $ref: "#/components/parameters/track_urn"
+      requestBody:
+        description: Storefront payload
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StorefrontUpdateRequest"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json; charset=utf-8:
+              schema:
+                $ref: "#/components/schemas/Storefront"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /tracks/{track_urn}/preview:
+    get:
+      tags:
+      - tracks
+      summary: Starts playback of a preview of the track
+      parameters:
+      - $ref: "#/components/parameters/track_urn"
+      - $ref: "#/components/parameters/secret_token"
+      responses:
+        "302":
+          $ref: "#/components/responses/Found"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /tracks/{track_urn}/streams:
+    get:
+      tags:
+      - tracks
+      summary: Returns a track's streamable URLs (needs to keep using authentication)
+      parameters:
+      - $ref: "#/components/parameters/track_urn"
+      - $ref: "#/components/parameters/secret_token"
+      responses:
+        "200":
+          $ref: "#/components/responses/Streams"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /tracks/{track_urn}/comments:
+    get:
+      tags:
+      - tracks
+      summary: Returns the comments posted on the track(track_urn).
+      parameters:
+      - $ref: "#/components/parameters/track_urn"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/offset"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Comments"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags:
+      - tracks
+      summary: Creates a comment on a track.
+      parameters:
+      - $ref: "#/components/parameters/track_urn"
+      requestBody:
+        description: |
+          Body of a comment
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrackUrnCommentsBody"
+        required: true
+      responses:
+        "201":
+          $ref: "#/components/responses/Comment"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+  /tracks/{track_urn}/favoriters:
+    get:
+      tags:
+      - tracks
+      summary: Returns a list of users who have favorited or liked the track.
+      parameters:
+      - $ref: "#/components/parameters/track_urn"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Users"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /tracks/{track_urn}/reposters:
+    get:
+      tags:
+      - tracks
+      summary: Returns a collection of track's reposters.
+      parameters:
+      - $ref: "#/components/parameters/track_urn"
+      - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          $ref: "#/components/responses/Users"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /tracks/{track_urn}/related:
+    get:
+      tags:
+      - tracks
+      summary: Returns all related tracks of track on SoundCloud.
+      parameters:
+      - $ref: "#/components/parameters/track_urn"
+      - $ref: "#/components/parameters/access"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/offset"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Tracks"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /system-playlists/{id}:
+    get:
+      tags:
+      - system-playlists
+      summary: Returns a system playlist.
+      parameters:
+      - $ref: "#/components/parameters/system_playlist_id"
+      - $ref: "#/components/parameters/access"
+      responses:
+        "200":
+          $ref: "#/components/responses/SystemPlaylist"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /resolve:
+    get:
+      tags:
+      - miscellaneous
+      summary: Resolves soundcloud.com and on.soundcloud.com URLs to Resource URLs
+        to use with the API.
+      parameters:
+      - $ref: "#/components/parameters/url"
+      responses:
+        "302":
+          $ref: "#/components/responses/Found"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /users/{user_urn}:
+    get:
+      tags:
+      - users
+      summary: Returns a user.
+      parameters:
+      - $ref: "#/components/parameters/user_urn"
+      responses:
+        "200":
+          $ref: "#/components/responses/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /users/{user_urn}/related:
+    get:
+      tags:
+      - users
+      summary: Returns related artist recommendations for a user on SoundCloud.
+      parameters:
+      - $ref: "#/components/parameters/user_urn"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/offset"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Users"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /users/{user_urn}/followers:
+    get:
+      tags:
+      - users
+      summary: Returns a list of user’s followers.
+      description: Returns a list of users that follows (user_urn).
+      parameters:
+      - $ref: "#/components/parameters/user_urn"
+      - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          $ref: "#/components/responses/Users"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /users/{user_urn}/followings:
+    get:
+      tags:
+      - users
+      summary: Returns a list of user’s followings.
+      description: Returns list of users that (user_urn) follows.
+      parameters:
+      - $ref: "#/components/parameters/user_urn"
+      - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          $ref: "#/components/responses/Users"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /users/{user_urn}/playlists:
+    get:
+      tags:
+      - users
+      summary: Returns a list of user's playlists.
+      parameters:
+      - $ref: "#/components/parameters/user_urn"
+      - $ref: "#/components/parameters/access"
+      - $ref: "#/components/parameters/show_tracks"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Playlists"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /users/{user_urn}/tracks:
+    get:
+      tags:
+      - users
+      summary: Returns a list of a given user's tracks.
+      parameters:
+      - $ref: "#/components/parameters/user_urn"
+      - $ref: "#/components/parameters/access"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/sort"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Tracks"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /users/{user_urn}/web-profiles:
+    get:
+      tags:
+      - users
+      summary: "Returns list of user's links added to their profile (website, facebook,\
+        \ instagram)."
+      parameters:
+      - $ref: "#/components/parameters/user_urn"
+      - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          $ref: "#/components/responses/WebProfiles"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /users/{user_urn}/likes/tracks:
+    get:
+      tags:
+      - users
+      summary: Returns a list of user's liked tracks.
+      parameters:
+      - $ref: "#/components/parameters/user_urn"
+      - $ref: "#/components/parameters/access"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Tracks"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /users/{user_urn}/likes/playlists:
+    get:
+      tags:
+      - users
+      summary: Returns a list of user's liked playlists.
+      parameters:
+      - $ref: "#/components/parameters/user_urn"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Playlists"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /users/{user_urn}/likes/system-playlists:
+    get:
+      tags:
+      - users
+      summary: Returns a list of user's liked system playlists (stations).
+      parameters:
+      - $ref: "#/components/parameters/user_urn"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/SystemPlaylists"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /users/{user_urn}/reposts/tracks:
+    get:
+      tags:
+      - users
+      - reposts
+      summary: Returns a list of user's track reposts.
+      parameters:
+      - $ref: "#/components/parameters/user_urn"
+      - $ref: "#/components/parameters/access"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Tracks"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /users/{user_urn}/reposts/playlists:
+    get:
+      tags:
+      - users
+      - reposts
+      summary: Returns a list of user's playlist reposts.
+      parameters:
+      - $ref: "#/components/parameters/user_urn"
+      - $ref: "#/components/parameters/limit"
+      - $ref: "#/components/parameters/linked_partitioning"
+      responses:
+        "200":
+          $ref: "#/components/responses/Playlists"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /likes/tracks/{track_urn}:
+    post:
+      tags:
+      - likes
+      summary: Likes a track.
+      parameters:
+      - $ref: "#/components/parameters/test_track_urn"
+      responses:
+        "200":
+          $ref: "#/components/responses/Success"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+    delete:
+      tags:
+      - likes
+      summary: Unlikes a track.
+      parameters:
+      - $ref: "#/components/parameters/test_track_urn"
+      responses:
+        "200":
+          $ref: "#/components/responses/Success"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /likes/playlists/{playlist_urn}:
+    post:
+      tags:
+      - likes
+      summary: Likes a playlist or system playlist (station).
+      parameters:
+      - $ref: "#/components/parameters/playlist_urn"
+      responses:
+        "200":
+          $ref: "#/components/responses/Success"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+    delete:
+      tags:
+      - likes
+      summary: Unlikes a playlist or system playlist (station).
+      parameters:
+      - $ref: "#/components/parameters/playlist_urn"
+      responses:
+        "200":
+          $ref: "#/components/responses/Success"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /reposts/tracks/{track_urn}:
+    post:
+      tags:
+      - reposts
+      summary: Reposts a track as the authenticated user
+      parameters:
+      - $ref: "#/components/parameters/test_track_urn"
+      responses:
+        "201":
+          description: Created
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /reposts/playlists/{playlist_urn}:
+    post:
+      tags:
+      - reposts
+      summary: Reposts a playlist as the authenticated user
+      parameters:
+      - $ref: "#/components/parameters/repost_playlist_urn"
+      responses:
+        "201":
+          description: Created
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags:
+      - reposts
+      summary: Removes a repost on a playlist as the authenticated user
+      parameters:
+      - $ref: "#/components/parameters/repost_playlist_urn"
+      responses:
+        "200":
+          description: Success
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /disconnect:
+    post:
+      tags:
+      - oauth
+      summary: Revokes OAuth access for the calling application.
+      description: |
+        Invalidates access tokens for the client application that issued the current access token.
+        Returns 400 if disconnect is not supported for the current token.
+      responses:
+        "204":
+          description: Tokens invalidated successfully.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          description: Internal Server Error
+  /sign-out:
+    post:
+      summary: Invalidates the session associated with the current token.
+      responses:
+        "200":
+          description: Success
+components:
+  schemas:
+    PlaylistsResult:
+      description: "Playlists returned either as a paginated collection or as a plain\
+        \ list, depending on the linked_partitioning query parameter."
+      oneOf:
+      - $ref: "#/components/schemas/Playlists"
+      - $ref: "#/components/schemas/PlaylistsArray"
+    TrackstrackUrncommentsComment:
+      required:
+      - body
+      type: object
+      properties:
+        body:
+          type: string
+          description: Comment's content
+          example: test comment
+        timestamp:
+          description: Timestamp of a comment. String or float representation is supported
+          oneOf:
+          - type: string
+          - type: number
+    User:
+      type: object
+      properties:
+        avatar_url:
+          type: string
+          description: URL to a JPEG image
+        city:
+          type: string
+          description: city
+        country:
+          type: string
+          description: country
+        description:
+          type: string
+          description: description
+        discogs_name:
+          type: string
+          description: discogs name
+        first_name:
+          type: string
+          description: first name
+        followers_count:
+          type: integer
+          description: number of followers
+        followings_count:
+          type: integer
+          description: number of followed users
+        full_name:
+          type: string
+          description: first and last name
+        urn:
+          type: string
+          description: unique identifier
+        kind:
+          type: string
+          description: kind of resource
+        created_at:
+          type: string
+          description: profile creation datetime
+          format: date-time
+        last_modified:
+          type: string
+          description: last modified datetime
+          format: date-time
+        last_name:
+          type: string
+          description: last name
+        permalink:
+          type: string
+          description: permalink of the resource
+        permalink_url:
+          type: string
+          description: URL to the SoundCloud.com page
+        plan:
+          type: string
+          description: subscription plan of the user
+        playlist_count:
+          type: integer
+          description: number of public playlists
+        public_favorites_count:
+          type: integer
+          description: number of favorited public tracks
+        reposts_count:
+          type: integer
+          description: number of reposts from user
+        track_count:
+          type: integer
+          description: number of public tracks
+        uri:
+          type: string
+          description: API resource URL
+        username:
+          type: string
+          description: username
+        website:
+          type: string
+          description: a URL to the website
+        website_title:
+          type: string
+          description: a custom title for the website
+        station_urn:
+          type: string
+          description: |
+            URN of the user's artist station system playlist, when available. Uses the `system-playlists` collection (e.g. `soundcloud:system-playlists:artist-stations:{id}`). Omitted or null when the user has no public tracks or no station.
+          nullable: true
+        subscriptions:
+          type: array
+          description: a list subscriptions associated with the user
+          deprecated: true
+          items:
+            $ref: "#/components/schemas/UserSubscriptions"
+      description: SoundCloud User object
+      nullable: true
+    SystemPlaylist:
+      type: object
+      properties:
+        kind:
+          type: string
+          description: Type of object (system-playlist).
+        urn:
+          type: string
+          description: System playlist URN.
+        title:
+          type: string
+          description: Playlist title.
+        description:
+          type: string
+          description: Playlist description.
+        playlist_type:
+          type: string
+          description: Playlist type.
+        permalink:
+          type: string
+          description: System playlist permalink slug.
+        permalink_url:
+          type: string
+          description: Permalink URL on soundcloud.com.
+        last_updated:
+          type: string
+          description: Last updated timestamp.
+          nullable: true
+        tracking_feature_name:
+          type: string
+          description: Tracking feature name.
+          nullable: true
+        track_count:
+          type: integer
+          description: Number of visible tracks in the playlist.
+        query_urn:
+          type: string
+          description: "Query URN used to generate the playlist, when available."
+          nullable: true
+        tracks:
+          type: array
+          description: Visible tracks in the playlist.
+          items:
+            $ref: "#/components/schemas/Track"
+      description: "SoundCloud system playlist object (e.g. track station, artist\
+        \ station)."
+    StorefrontUpdateRequest:
+      required:
+      - link
+      - title
+      - type
+      type: object
+      properties:
+        title:
+          maxLength: 100
+          type: string
+          description: Card title shown on the storefront module.
+          example: Download now
+        type:
+          type: string
+          description: The type of item offered.
+          enum:
+          - digital
+          - vinyl
+          - cd
+          - cassette
+          - apparel
+          - sample_pack
+          - subscription
+          - live_event
+          - live_stream
+          - other
+        link:
+          maxLength: 255
+          type: string
+          description: External http(s) URL the storefront button opens.
+          example: https://example.com/my-track
+        link_title:
+          maxLength: 50
+          type: string
+          description: Label of the storefront button. Omit to clear.
+          example: Download
+        description:
+          maxLength: 500
+          type: string
+          description: Description shown on the storefront module. Omit to clear.
+          example: Get the track original files for free.
+        price:
+          maxLength: 20
+          type: string
+          description: Display-only price text shown next to the item type. No payment
+            is processed by SoundCloud. Omit to clear.
+          example: "0"
+      description: |
+        Creates or updates the storefront (Artist Storefront / buy module) of a track. The request
+        replaces the whole storefront - omitted optional fields are cleared, so always send every
+        value the storefront should keep.
+    ErrorErrors:
+      type: object
+      properties:
+        error_message:
+          type: string
+    TracksBody1:
+      allOf:
+      - $ref: "#/components/schemas/TrackDataRequest"
+      - required:
+        - "track[asset_data]"
+        - "track[title]"
+    SlashPlaylists:
+      allOf:
+      - $ref: "#/components/schemas/CreateUpdatePlaylistFormRequest"
+      - required:
+        - "playlist[title]"
+    CreateUpdatePlaylistRequestPlaylist:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Title of the playlist
+        description:
+          type: string
+          description: Description of the playlist
+        sharing:
+          type: string
+          description: public or private
+          enum:
+          - public
+          - private
+        tracks:
+          type: array
+          description: List of tracks to add to playlist
+          items:
+            $ref: "#/components/schemas/CreateUpdatePlaylistRequestPlaylistTracks"
+        artwork_data:
+          title: Only for POST
+          type: string
+          format: binary
+        ean:
+          type: string
+          description: The European Article Number
+        genre:
+          type: string
+          description: Playlist's genre
+        label_name:
+          type: string
+          description: Label name
+        license:
+          type: string
+          description: License number
+        permalink:
+          type: string
+          description: Playlist's permalink
+        permalink_url:
+          type: string
+          description: Full permalink URL
+        purchase_title:
+          type: string
+          description: Purchase title
+        purchase_url:
+          type: string
+          description: Purchase URL
+        release:
+          type: string
+          description: Playlist's release
+        release_date:
+          type: string
+          description: Release date
+        set_type:
+          type: string
+          description: Playlist or album type
+          enum:
+          - album
+          - playlist
+        tag_list:
+          type: string
+          description: A comma-separated list of tags
+    Users:
+      type: object
+      properties:
+        collection:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        next_href:
+          type: string
+    TracksResult:
+      description: "Tracks returned either as a paginated collection or as a plain\
+        \ list, depending on the linked_partitioning query parameter."
+      oneOf:
+      - $ref: "#/components/schemas/Tracks"
+      - $ref: "#/components/schemas/TracksList"
+    PlaylistsBody:
+      allOf:
+      - $ref: "#/components/schemas/CreateUpdatePlaylistFormRequest"
+      - required:
+        - "playlist[title]"
+    SlashTracks:
+      allOf:
+      - $ref: "#/components/schemas/TrackDataRequest"
+      - required:
+        - "track[asset_data]"
+        - "track[title]"
+    Playlist:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Playlist title.
+        urn:
+          type: string
+          description: Playlist identifier.
+        kind:
+          type: string
+          description: Type of Soundcloud object (playlist).
+        artwork_url:
+          type: string
+          description: URL to a JPEG image.
+        created_at:
+          type: string
+          description: Created timestamp.
+        description:
+          type: string
+          description: Playlist description.
+        downloadable:
+          type: boolean
+          description: is downloadable.
+        duration:
+          type: integer
+          description: Playlist duration.
+        ean:
+          type: string
+          description: European Article Number.
+        embeddable_by:
+          type: string
+          description: Embeddable by.
+        genre:
+          type: string
+          description: Playlist genre.
+        label_id:
+          type: integer
+          description: Label user identifier.
+        label_name:
+          type: string
+          description: Label name.
+        last_modified:
+          type: string
+          description: Last modified timestamp.
+        license:
+          type: string
+          description: License.
+        permalink:
+          type: string
+          description: Playlist permalink.
+        permalink_url:
+          type: string
+          description: Playlist permalink URL.
+        playlist_type:
+          type: string
+          description: Type of playlist.
+        purchase_title:
+          type: string
+          description: Purchase title.
+        purchase_url:
+          type: string
+          description: Purchase URL.
+        release:
+          type: string
+          description: Release.
+        release_day:
+          type: integer
+          description: Day of release.
+        release_month:
+          type: integer
+          description: Month of release.
+        release_year:
+          type: integer
+          description: Year of release.
+        sharing:
+          type: string
+          description: Type of sharing (private/public).
+        streamable:
+          type: boolean
+          description: Is streamable.
+        tag_list:
+          type: string
+          description: Tags.
+        track_count:
+          type: integer
+          description: Count of tracks.
+        tracks:
+          type: array
+          description: List of tracks.
+          items:
+            $ref: "#/components/schemas/Track"
+        type:
+          type: string
+          description: Playlist type.
+        uri:
+          type: string
+          description: Playlist URI.
+        user:
+          description: User who created the playlist.
+          allOf:
+          - $ref: "#/components/schemas/User"
+        user_urn:
+          type: string
+          description: User identifier.
+        likes_count:
+          type: integer
+          description: Count of playlist likes.
+        label:
+          description: User who owns the record label of the playlist.
+          nullable: true
+          allOf:
+          - $ref: "#/components/schemas/User"
+        tracks_uri:
+          type: string
+          description: tracks URI.
+          nullable: true
+        tags:
+          type: string
+          description: Tags.
+          nullable: true
+      description: Soundcloud Playlist Object
+    TracksBody:
+      allOf:
+      - $ref: "#/components/schemas/TrackDataRequest"
+      - required:
+        - "track[asset_data]"
+        - "track[title]"
+    TrackUrnCommentsBody:
+      type: object
+      properties:
+        comment:
+          $ref: "#/components/schemas/TrackstrackUrncommentsComment"
+    PlaylistsArray:
+      type: array
+      deprecated: true
+      items:
+        $ref: "#/components/schemas/Playlist"
+    SystemPlaylistsResult:
+      description: "System playlists returned either as a paginated collection or\
+        \ as a plain list, depending on the linked_partitioning query parameter."
+      oneOf:
+      - $ref: "#/components/schemas/SystemPlaylists"
+      - $ref: "#/components/schemas/SystemPlaylistsArray"
+    ActivitiesCollection:
+      required:
+      - created_at
+      - origin
+      - type
+      type: object
+      properties:
+        type:
+          type: string
+          description: |
+            Type of activity (e.g. `track`, `track:repost`, `playlist`, `playlist:repost`).
+            For `track:repost` and `playlist:repost`, the API also returns a top-level string field
+            `reposter` with the URN of the user who reposted.
+        created_at:
+          type: string
+          description: Created timestamp.
+        origin:
+          description: Origin (track or playlist).
+          anyOf:
+          - $ref: "#/components/schemas/Track"
+          - $ref: "#/components/schemas/Playlist"
+    WebProfilesInner:
+      type: object
+      properties:
+        created_at:
+          type: string
+          description: Timestamp of when the link was added to the profile.
+        urn:
+          type: string
+          description: Id
+        kind:
+          type: string
+          description: Kind
+        service:
+          type: string
+          description: Service or platform
+        title:
+          type: string
+          description: Link's title
+        url:
+          type: string
+          description: URL of the external link
+        username:
+          type: string
+          description: Username extracted from the external link
+    CreateUpdatePlaylistFormRequest:
+      type: object
+      properties:
+        playlist[title]:
+          type: string
+        playlist[sharing]:
+          type: string
+          enum:
+          - public
+          - private
+          default: public
+        playlist[description]:
+          type: string
+        playlist[tracks][][urn]:
+          type: string
+          description: "To pass multiple tracks, pass multiple comma-separated values,\
+            \ e.g. -F \"playlist[tracks][][urn]=soundcloud:tracks:111,soundcloud:tracks:222\""
+        playlist[artwork_data]:
+          title: "The playlist artwork in binary format. Supported formats are gif,\
+            \ jpeg and png"
+          type: string
+          format: binary
+        playlist[ean]:
+          type: string
+        playlist[genre]:
+          type: string
+        playlist[label_name]:
+          type: string
+        playlist[license]:
+          type: string
+        playlist[permalink]:
+          type: string
+        playlist[permalink_url]:
+          type: string
+        playlist[purchase_title]:
+          type: string
+        playlist[purchase_url]:
+          type: string
+        playlist[release]:
+          type: string
+        playlist[release_date]:
+          type: string
+        playlist[set_type]:
+          type: string
+          enum:
+          - album
+          - playlist
+        playlist[tag_list]:
+          type: string
+    TracksList:
+      type: array
+      deprecated: true
+      items:
+        $ref: "#/components/schemas/Track"
+    SystemPlaylists:
+      type: object
+      properties:
+        collection:
+          type: array
+          items:
+            $ref: "#/components/schemas/SystemPlaylist"
+        next_href:
+          type: string
+    CreateUpdatePlaylistRequestPlaylistTracks:
+      required:
+      - urn
+      type: object
+      properties:
+        urn:
+          type: string
+          description: SoundCloud track urn
+    UserSubscriptions:
+      type: object
+      properties:
+        product:
+          $ref: "#/components/schemas/UserProduct"
+        recurring:
+          type: boolean
+          description: if the subscription is recurring or not
+      description: subscription
+    Streams:
+      type: object
+      properties:
+        hls_aac_160_url:
+          type: string
+        hls_mp3_128_url:
+          type: string
+        preview_mp3_128_url:
+          type: string
+    CreateUpdatePlaylistRequest:
+      type: object
+      properties:
+        playlist:
+          $ref: "#/components/schemas/CreateUpdatePlaylistRequestPlaylist"
+    Activities:
+      type: object
+      properties:
+        collection:
+          type: array
+          description: List of activities.
+          items:
+            $ref: "#/components/schemas/ActivitiesCollection"
+        next_href:
+          type: string
+          description: URL of the next page of activities.
+        future_href:
+          type: string
+          description: URL to fetch activities newer than this page.
+      description: User's activities.
+    SystemPlaylistsArray:
+      type: array
+      deprecated: true
+      items:
+        $ref: "#/components/schemas/SystemPlaylist"
+    Comment:
+      type: object
+      properties:
+        body:
+          type: string
+          description: Comment body.
+        created_at:
+          type: string
+          description: Created timestamp.
+        urn:
+          type: string
+          description: Identifier.
+        kind:
+          type: string
+          description: Kind (comment).
+        user_urn:
+          type: string
+          description: User's identifier.
+        timestamp:
+          type: string
+          description: Timestamp.
+        track_urn:
+          type: string
+          description: Track's identifier.
+        uri:
+          type: string
+          description: Comment's URL.
+        user:
+          $ref: "#/components/schemas/CommentUser"
+      description: User's Comment
+    CommentUser:
+      type: object
+      properties:
+        urn:
+          type: string
+          description: unique identifier
+        kind:
+          type: string
+          description: kind of resource.
+        permalink:
+          type: string
+          description: permalink of the resource.
+        username:
+          type: string
+          description: username
+        last_modified:
+          type: string
+          description: last modified timestamp.
+        uri:
+          type: string
+          description: API resource URL.
+        permalink_url:
+          type: string
+          description: URL to the SoundCloud.com page.
+        avatar_url:
+          type: string
+          description: URL to a JPEG image.
+        followers_count:
+          type: integer
+          description: number of followers.
+        followings_count:
+          type: integer
+          description: number of followed users.
+        reposts_count:
+          type: integer
+          description: number of reposts from user
+      description: SoundCloud User object
+    Tracks:
+      type: object
+      properties:
+        collection:
+          type: array
+          items:
+            $ref: "#/components/schemas/Track"
+        next_href:
+          type: string
+    MeQuota:
+      type: object
+      properties:
+        unlimited_upload_quota:
+          type: boolean
+          description: unlimited upload quota.
+        upload_seconds_used:
+          type: integer
+          description: upload seconds used.
+        upload_seconds_left:
+          type: integer
+          description: upload seconds left.
+          nullable: true
+      description: user's upload quota
+    Comments:
+      type: object
+      properties:
+        collection:
+          type: array
+          items:
+            $ref: "#/components/schemas/Comment"
+        next_href:
+          type: string
+          nullable: true
+    TrackMetadataRequest:
+      type: object
+      properties:
+        track:
+          $ref: "#/components/schemas/TrackMetadataRequestTrack"
+    Error:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+        link:
+          type: string
+        error:
+          type: string
+          nullable: true
+          deprecated: true
+        errors:
+          type: array
+          deprecated: true
+          items:
+            $ref: "#/components/schemas/ErrorErrors"
+        status:
+          type: string
+          deprecated: true
+    TrackDataRequest:
+      type: object
+      properties:
+        track[title]:
+          type: string
+        track[artist]:
+          type: string
+          description: "Optional artist name for the track. Returned as metadata_artist\
+            \ in track responses. Do not use track[metadata_artist] on upload."
+        track[asset_data]:
+          title: Only for uploading
+          type: string
+          format: binary
+        track[permalink]:
+          type: string
+        track[sharing]:
+          type: string
+          enum:
+          - public
+          - private
+          default: public
+        track[embeddable_by]:
+          type: string
+          description: "who can embed this track \"all\", \"me\", or \"none\""
+          enum:
+          - all
+          - me
+          - none
+        track[purchase_url]:
+          type: string
+        track[description]:
+          type: string
+        track[genre]:
+          type: string
+        track[tag_list]:
+          type: string
+          description: "The tag_list property contains a list of tags separated by\
+            \ spaces. Multiword tags are quoted in double quotes. We also support\
+            \ machine tags that follow the pattern NAMESPACE:KEY=VALUE. For example:\
+            \ geo:lat=43.555 camel:size=medium “machine:tag=with space” Machine tags\
+            \ are not revealed to the user on the track pages."
+        track[label_name]:
+          type: string
+        track[release]:
+          type: string
+        track[release_date]:
+          title: write only!
+          type: string
+          description: "string, formatted as yyyy-mm-dd, representing release date"
+        track[streamable]:
+          type: boolean
+          default: true
+        track[downloadable]:
+          type: boolean
+          default: true
+        track[license]:
+          type: string
+          description: "Possible values: no-rights-reserved, all-rights-reserved,\
+            \ cc-by, cc-by-nc, cc-by-nd, cc-by-sa, cc-by-nc-nd, cc-by-nc-sa"
+          enum:
+          - no-rights-reserved
+          - all-rights-reserved
+          - cc-by
+          - cc-by-nc
+          - cc-by-nd
+          - cc-by-sa
+          - cc-by-nc-nd
+          - cc-by-nc-sa
+        track[commentable]:
+          type: boolean
+          default: true
+        track[reveal_stats]:
+          type: boolean
+          description: "When false (quiet mode), play and favorite counts are hidden."
+        track[reveal_comments]:
+          type: boolean
+          description: "When false (quiet mode), comments are hidden."
+        track[isrc]:
+          type: string
+        track[artwork_data]:
+          title: "Only for uploading, for PRO users"
+          type: string
+          format: binary
+    TrackUpdateFormRequest:
+      type: object
+      properties:
+        track[title]:
+          type: string
+        track[permalink]:
+          type: string
+        track[sharing]:
+          type: string
+          enum:
+          - public
+          - private
+          default: public
+        track[embeddable_by]:
+          type: string
+          description: "who can embed this track \"all\", \"me\", or \"none\""
+          enum:
+          - all
+          - me
+          - none
+        track[purchase_url]:
+          type: string
+        track[description]:
+          type: string
+        track[genre]:
+          type: string
+        track[tag_list]:
+          type: string
+          description: |
+            The tag_list property contains a list of tags separated by spaces. Multiword tags are quoted in double quotes. We also support machine tags that follow the pattern NAMESPACE:KEY=VALUE. For example: geo:lat=43.555
+            camel:size=medium
+            "machine:tag=with space"
+            Machine tags are not revealed to the user on the track pages.
+        track[label_name]:
+          type: string
+        track[release]:
+          type: string
+        track[release_date]:
+          type: string
+          description: "string, formatted as yyyy-mm-dd, representing release date"
+          writeOnly: true
+        track[streamable]:
+          type: boolean
+          default: true
+        track[downloadable]:
+          type: boolean
+          default: true
+        track[license]:
+          type: string
+          enum:
+          - no-rights-reserved
+          - all-rights-reserved
+          - cc-by
+          - cc-by-nc
+          - cc-by-nd
+          - cc-by-sa
+          - cc-by-nc-nd
+          - cc-by-nc-sa
+        track[commentable]:
+          type: boolean
+          default: true
+        track[reveal_stats]:
+          type: boolean
+          description: "When false (quiet mode), play and favorite counts are hidden."
+        track[reveal_comments]:
+          type: boolean
+          description: "When false (quiet mode), comments are hidden."
+        track[isrc]:
+          type: string
+        track[artwork_data]:
+          type: string
+          description: "Track artwork in binary format. Only for PRO users. Supported\
+            \ formats are gif, jpeg and png."
+          format: binary
+    Found:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Status code.
+        location:
+          type: string
+          description: Location URL of the resource.
+    Storefront:
+      type: object
+      properties:
+        track_urn:
+          type: string
+          description: The urn of the track the storefront belongs to.
+          example: soundcloud:tracks:1495999657
+        title:
+          type: string
+          description: Card title shown on the storefront module.
+          example: Download now
+        type:
+          type: string
+          description: The type of item offered.
+          enum:
+          - digital
+          - vinyl
+          - cd
+          - cassette
+          - apparel
+          - sample_pack
+          - subscription
+          - live_event
+          - live_stream
+          - other
+        link:
+          type: string
+          description: External URL the storefront button opens.
+          example: https://example.com/my-track
+        link_title:
+          type: string
+          description: Label of the storefront button.
+          nullable: true
+          example: Download
+        description:
+          type: string
+          description: Description shown on the storefront module.
+          nullable: true
+        image_url:
+          type: string
+          description: Image shown on the storefront module. Read-only; managed on
+            soundcloud.com.
+          nullable: true
+        price:
+          type: string
+          description: Display-only price text shown next to the item type. No payment
+            is processed by SoundCloud.
+          nullable: true
+          example: "0"
+      description: A track's storefront (Artist Storefront / buy module) shown on
+        the track page.
+    TrackMetadataRequestTrack:
+      type: object
+      properties:
+        title:
+          type: string
+        permalink:
+          type: string
+        sharing:
+          type: string
+          enum:
+          - public
+          - private
+          default: public
+        embeddable_by:
+          type: string
+          description: "who can embed this track \"all\", \"me\", or \"none\""
+          enum:
+          - all
+          - me
+          - none
+        purchase_url:
+          type: string
+        description:
+          type: string
+        genre:
+          type: string
+        tag_list:
+          type: string
+          description: "The tag_list property contains a list of tags separated by\
+            \ spaces. Multiword tags are quoted in double quotes. We also support\
+            \ machine tags that follow the pattern NAMESPACE:KEY=VALUE. For example:\
+            \ geo:lat=43.555 camel:size=medium “machine:tag=with space” Machine tags\
+            \ are not revealed to the user on the track pages."
+        label_name:
+          type: string
+        release:
+          type: string
+        release_date:
+          title: write only!
+          type: string
+          description: "string, formatted as yyyy-mm-dd, representing release date"
+        streamable:
+          type: boolean
+          default: true
+        downloadable:
+          type: boolean
+          default: true
+        license:
+          type: string
+          description: "Possible values: no-rights-reserved, all-rights-reserved,\
+            \ cc-by, cc-by-nc, cc-by-nd, cc-by-sa, cc-by-nc-nd, cc-by-nc-sa"
+          enum:
+          - no-rights-reserved
+          - all-rights-reserved
+          - cc-by
+          - cc-by-nc
+          - cc-by-nd
+          - cc-by-sa
+          - cc-by-nc-nd
+          - cc-by-nc-sa
+        commentable:
+          type: boolean
+          default: true
+        reveal_stats:
+          type: boolean
+          description: "When false (quiet mode), play and favorite counts are hidden."
+        reveal_comments:
+          type: boolean
+          description: "When false (quiet mode), comments are hidden."
+        isrc:
+          type: string
+        metadata_artist:
+          type: string
+          description: "Optional artist name, when different from user. Use this field\
+            \ in JSON PUT requests (or track[metadata_artist] in multipart PUT requests);\
+            \ use track[artist] in multipart POST uploads."
+    TooManyRequests:
+      allOf:
+      - $ref: "#/components/schemas/Error"
+      - type: object
+        properties:
+          spam_warning_urn:
+            type: string
+    Me:
+      type: object
+      properties:
+        avatar_url:
+          type: string
+          description: URL to a JPEG image.
+        city:
+          type: string
+          description: city.
+        comments_count:
+          type: integer
+          description: "comments count. From now on, the field always has a `0` value."
+          deprecated: true
+        country:
+          type: string
+          description: country.
+        created_at:
+          type: string
+          description: created at date
+        description:
+          type: string
+          description: description.
+        discogs_name:
+          type: string
+          description: discogs name.
+        first_name:
+          type: string
+          description: first name.
+        followers_count:
+          type: integer
+          description: number of followers.
+        followings_count:
+          type: integer
+          description: number of followed users.
+        full_name:
+          type: string
+          description: first and last name.
+        urn:
+          type: string
+          description: unique identifier
+        kind:
+          type: string
+          description: kind of resource.
+        last_modified:
+          type: string
+          description: last modified timestamp.
+        last_name:
+          type: string
+          description: last name.
+        likes_count:
+          type: integer
+          description: likes count.
+        locale:
+          type: string
+          description: locale.
+          nullable: true
+        online:
+          type: boolean
+          description: online.
+        permalink:
+          type: string
+          description: permalink of the resource.
+        permalink_url:
+          type: string
+          description: URL to the SoundCloud.com page.
+        plan:
+          type: string
+          description: subscription plan of the user.
+        playlist_count:
+          type: integer
+          description: number of public playlists.
+        primary_email_confirmed:
+          type: boolean
+          description: boolean if email is confirmed.
+        private_playlists_count:
+          type: integer
+          description: number of private playlists.
+        private_tracks_count:
+          type: integer
+          description: number of private tracks.
+        public_favorites_count:
+          type: integer
+          description: number of favorited public tracks
+        quota:
+          $ref: "#/components/schemas/MeQuota"
+        reposts_count:
+          type: integer
+          description: number of reposts from user
+        subscriptions:
+          type: array
+          description: a list subscriptions associated with the user
+          items:
+            $ref: "#/components/schemas/UserSubscriptions"
+        track_count:
+          type: integer
+          description: number of public tracks.
+        upload_seconds_left:
+          type: integer
+          description: upload seconds left.
+          nullable: true
+        uri:
+          type: string
+          description: API resource URL.
+        username:
+          type: string
+          description: username
+        website:
+          type: string
+          description: a URL to the website.
+        website_title:
+          type: string
+          description: a custom title for the website.
+      description: SoundCloud Me object
+    Playlists:
+      type: object
+      properties:
+        collection:
+          type: array
+          items:
+            $ref: "#/components/schemas/Playlist"
+        next_href:
+          type: string
+    UserProduct:
+      type: object
+      properties:
+        id:
+          type: string
+          description: subscription id instance.
+        name:
+          type: string
+          description: subscription name instance.
+      description: product
+    Track:
+      type: object
+      properties:
+        kind:
+          type: string
+          description: Type of object (track).
+        title:
+          type: string
+          description: Track title.
+        artwork_url:
+          type: string
+          description: URL to a JPEG image.
+        bpm:
+          type: number
+          description: Tempo.
+          format: double
+        comment_count:
+          type: integer
+          description: Number of comments.
+          format: int64
+        commentable:
+          type: boolean
+          description: Is commentable.
+        created_at:
+          type: string
+          description: Created timestamp.
+        description:
+          type: string
+          description: Track description.
+        download_count:
+          type: integer
+          description: Number of downloads.
+          format: int64
+        downloadable:
+          type: boolean
+          description: Is downloadable.
+        duration:
+          type: integer
+          description: Track duration in milliseconds.
+        embeddable_by:
+          type: string
+          description: Embeddable by.
+          deprecated: true
+        favoritings_count:
+          type: integer
+          description: Number of favoritings.
+          format: int64
+        genre:
+          type: string
+          description: Genre
+        urn:
+          type: string
+          description: Track URN identifier.
+        isrc:
+          type: string
+          description: ISRC code.
+        key_signature:
+          type: string
+          description: Key signature.
+        label_name:
+          type: string
+          description: Label user name.
+        license:
+          type: string
+          description: License
+        metadata_artist:
+          type: string
+          description: "Optional artist name, when different from user."
+        permalink_url:
+          type: string
+          description: Permalink URL.
+        playback_count:
+          type: integer
+          description: Number of plays.
+          format: int64
+        purchase_title:
+          type: string
+          description: Purchase title.
+        purchase_url:
+          type: string
+          description: Purchase URL.
+        release:
+          type: string
+          description: Release.
+        release_day:
+          type: integer
+          description: Day of release.
+        release_month:
+          type: integer
+          description: Month of release.
+        release_year:
+          type: integer
+          description: Year of release.
+        sharing:
+          type: string
+          description: Type of sharing (public/private).
+        stream_url:
+          type: string
+          description: URL to stream (preview only)
+          deprecated: true
+        streamable:
+          type: boolean
+          description: Is streamable.
+        tag_list:
+          type: string
+          description: Tags.
+        uri:
+          type: string
+          description: Track URI.
+        user:
+          description: User who uploaded a track.
+          allOf:
+          - $ref: "#/components/schemas/User"
+        user_favorite:
+          type: boolean
+          description: "Is user's favourite. It is only set when fetching search results\
+            \ or single track, otherwise it is false."
+        user_playback_count:
+          type: integer
+          description: Number of plays by a user.
+        waveform_url:
+          type: string
+          description: Waveform URL.
+        available_country_codes:
+          type: string
+          description: List of country codes where track is available.
+        access:
+          type: string
+          description: |
+            Level of access the user (logged in or anonymous) has to the track.
+              * `playable` - user is allowed to listen to a full track.
+              * `preview` - user is allowed to preview a track, meaning a snippet is available
+              * `blocked` - user can only see the metadata of a track, no streaming is possible
+          nullable: true
+          enum:
+          - playable
+          - preview
+          - blocked
+        download_url:
+          type: string
+          description: URL to download a track. Omitted or null when track is not
+            downloadable.
+          nullable: true
+        reposts_count:
+          type: integer
+          description: Number of reposts.
+        reveal_stats:
+          type: boolean
+          description: "Whether play and favorite counts are visible. When false (quiet\
+            \ mode), stats are hidden."
+        reveal_comments:
+          type: boolean
+          description: "Whether comments are visible. When false (quiet mode), comments\
+            \ are hidden."
+        station_urn:
+          type: string
+          description: |
+            URN of the track's station system playlist, when available. Uses the `system-playlists` collection (e.g. `soundcloud:system-playlists:track-stations:{id}`). Omitted or null for non-public tracks and tracks without a station.
+          nullable: true
+        secret_uri:
+          type: string
+          description: Secret URL.
+      description: Soundcloud Track object.
+    WebProfiles:
+      type: array
+      description: User's links added to their profile
+      items:
+        $ref: "#/components/schemas/WebProfilesInner"
+  responses:
+    Success:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          examples:
+            default:
+              $ref: "#/components/examples/Success"
+    Successful:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          examples:
+            default:
+              $ref: "#/components/examples/Successful"
+    Found:
+      description: Found
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/Found"
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            default:
+              $ref: "#/components/examples/BadRequest"
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            default:
+              $ref: "#/components/examples/Unauthorized"
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            default:
+              $ref: "#/components/examples/Forbidden"
+    NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            default:
+              $ref: "#/components/examples/NotFound"
+    UnprocessableEntity:
+      description: Unprocessable Entity
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          examples:
+            default:
+              $ref: "#/components/examples/UnprocessableEntity"
+    TooManyRequests:
+      description: Too Many Requests
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TooManyRequests"
+          examples:
+            default:
+              $ref: "#/components/examples/TooManyRequests"
+    User:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/User"
+          examples:
+            default:
+              $ref: "#/components/examples/User"
+    Me:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/Me"
+    Users:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/Users"
+          examples:
+            default:
+              $ref: "#/components/examples/Users"
+    Track:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/Track"
+          examples:
+            default:
+              $ref: "#/components/examples/Track"
+    Tracks:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/TracksResult"
+          examples:
+            default:
+              $ref: "#/components/examples/Tracks"
+            tracksList:
+              $ref: "#/components/examples/TracksList"
+    TracksList:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/TracksList"
+          examples:
+            default:
+              $ref: "#/components/examples/TracksList"
+    Playlist:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/Playlist"
+          examples:
+            default:
+              $ref: "#/components/examples/Playlist"
+    SystemPlaylist:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/SystemPlaylist"
+          examples:
+            default:
+              $ref: "#/components/examples/SystemPlaylist"
+    SystemPlaylists:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/SystemPlaylistsResult"
+          examples:
+            default:
+              $ref: "#/components/examples/SystemPlaylists"
+            systemPlaylistsArray:
+              $ref: "#/components/examples/SystemPlaylistsArray"
+    Playlists:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/PlaylistsResult"
+          examples:
+            default:
+              $ref: "#/components/examples/Playlists"
+            playlistsArray:
+              $ref: "#/components/examples/PlaylistsArray"
+    Activities:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/Activities"
+          examples:
+            default:
+              $ref: "#/components/examples/Activities"
+    WebProfiles:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/WebProfiles"
+          examples:
+            default:
+              $ref: "#/components/examples/WebProfiles"
+    Comment:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/Comment"
+          examples:
+            default:
+              $ref: "#/components/examples/Comment"
+    Comments:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/Comments"
+          examples:
+            default:
+              $ref: "#/components/examples/Comments"
+    Streams:
+      description: Success
+      content:
+        application/json; charset=utf-8:
+          schema:
+            $ref: "#/components/schemas/Streams"
+          examples:
+            default:
+              $ref: "#/components/examples/Streams"
+  parameters:
+    bpm:
+      name: bpm
+      in: query
+      description: "Return tracks with a specified bpm[from], bpm[to]"
+      required: false
+      style: deepObject
+      explode: false
+      schema:
+        type: object
+        properties:
+          from:
+            type: integer
+            description: Return tracks with at least this bpm value
+            example: 123
+          to:
+            type: integer
+            description: Return tracks with at most this bpm value
+            example: 456
+    created_at:
+      name: created_at
+      in: query
+      description: (yyyy-mm-dd hh:mm:ss) return tracks created within the specified
+        dates
+      required: false
+      style: deepObject
+      explode: false
+      schema:
+        type: object
+        properties:
+          from:
+            type: string
+            description: (yyyy-mm-dd hh:mm:ss) return tracks created at this date
+              or later
+            example: 2020-12-24 00:00:00
+          to:
+            type: string
+            description: (yyyy-mm-dd hh:mm:ss) return tracks created at this date
+              or earlier
+            example: 2020-12-26 00:00:00
+    duration:
+      name: duration
+      in: query
+      description: Return tracks within a specified duration range
+      required: false
+      style: deepObject
+      explode: false
+      schema:
+        type: object
+        properties:
+          from:
+            type: integer
+            description: Return tracks with at least this duration value
+            example: 123456
+          to:
+            type: integer
+            description: Return tracks with at most this duration value
+            example: 456789
+    genres:
+      name: genres
+      in: query
+      description: A comma separated list of genres
+      required: false
+      style: form
+      explode: true
+      schema:
+        type: string
+      example: "Pop,House"
+    urns:
+      name: urns
+      in: query
+      description: A comma separated list of track urns to filter on
+      required: false
+      style: form
+      explode: true
+      schema:
+        type: string
+      example: "soundcloud:tracks:1,soundcloud:tracks:2,soundcloud:tracks:3"
+    limit:
+      name: limit
+      in: query
+      description: Number of results to return in the collection.
+      required: false
+      style: form
+      explode: true
+      schema:
+        maximum: 200
+        minimum: 1
+        type: integer
+        default: 50
+      example: 2
+    offset:
+      name: offset
+      in: query
+      description: "Offset of first result. Deprecated, use `linked_partitioning`\
+        \ instead."
+      required: false
+      deprecated: true
+      style: form
+      explode: true
+      schema:
+        type: integer
+        default: 0
+      example: 0
+    q:
+      name: q
+      in: query
+      description: search
+      required: false
+      style: form
+      explode: true
+      schema:
+        type: string
+      example: hello
+    tags:
+      name: tags
+      in: query
+      description: A comma separated list of tags
+      required: false
+      style: form
+      explode: true
+      schema:
+        type: string
+      example: test
+    url:
+      name: url
+      in: query
+      description: |
+        SoundCloud URL to resolve. Supports track, playlist, user, and system playlist permalinks (e.g. `https://soundcloud.com/discover/sets/track-stations:2287580618`).
+      required: true
+      style: form
+      explode: true
+      schema:
+        type: string
+      example: https://soundcloud.com/user-434241656
+    linked_partitioning:
+      name: linked_partitioning
+      in: query
+      description: "Returns paginated collection of items (recommended, returning\
+        \ a list without pagination is deprecated and should not be used)"
+      required: false
+      style: form
+      explode: true
+      schema:
+        type: boolean
+      example: true
+    sort:
+      name: sort
+      in: query
+      description: Sort order of tracks by upload date. `desc` returns newest tracks
+        first; `asc` returns oldest first. Also accepts `direction` or `order` as
+        aliases.
+      required: false
+      style: form
+      explode: true
+      schema:
+        type: string
+        enum:
+        - asc
+        - desc
+        default: desc
+      example: desc
+    secret_token:
+      name: secret_token
+      in: query
+      description: A secret token to fetch private playlists/tracks
+      required: false
+      style: form
+      explode: true
+      schema:
+        type: string
+    access:
+      name: access
+      in: query
+      description: |
+        Filters content by level of access the user (logged in or anonymous) has to the track. The result list will include only tracks with the specified access. Include all options if you'd like to see all possible tracks. See `Track#access` schema for more details.
+      required: false
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          type: string
+          enum:
+          - playable
+          - preview
+          - blocked
+    access_explicit:
+      name: access
+      in: query
+      description: |
+        Filters content by level of access the user (logged in or anonymous) has to the track. The result list will include only tracks with the specified access. Include all options if you'd like to see all possible tracks. See `Track#access` schema for more details.
+      required: false
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          type: string
+          enum:
+          - playable
+          - preview
+          - blocked
+    show_tracks:
+      name: show_tracks
+      in: query
+      description: A boolean flag to request a playlist with or without tracks. Default
+        is `true`.
+      required: false
+      style: form
+      explode: true
+      schema:
+        type: boolean
+      example: true
+    system_playlist_id:
+      name: id
+      in: path
+      description: |
+        System playlist URN or identifier. Accepts a full URN (e.g. `soundcloud:system-playlists:track-stations:2287580618`) or the identifier portion (e.g. `track-stations:2287580618`).
+      required: true
+      style: simple
+      explode: false
+      schema:
+        type: string
+      example: soundcloud:system-playlists:track-stations:2287580618
+    playlist_urn:
+      name: playlist_urn
+      in: path
+      description: |
+        User playlist URN or system playlist (station) URN.
+
+        Examples:
+        - User playlist: `soundcloud:playlists:1212781357`
+        - System playlist (station): `soundcloud:system-playlists:track-stations:2287580618`
+      required: true
+      style: simple
+      explode: false
+      schema:
+        type: string
+      example: soundcloud:playlists:1212781357
+    fake_playlist_urn:
+      name: playlist_urn
+      in: path
+      description: SoundCloud playlist id
+      required: true
+      style: simple
+      explode: false
+      schema:
+        type: string
+      example: soundcloud:playlists:10
+    repost_playlist_urn:
+      name: playlist_urn
+      in: path
+      description: SoundCloud playlist id
+      required: true
+      style: simple
+      explode: false
+      schema:
+        type: string
+      example: soundcloud:playlists:1205584273
+    track_urn:
+      name: track_urn
+      in: path
+      description: SoundCloud Track urn
+      required: true
+      style: simple
+      explode: false
+      schema:
+        type: string
+      example: soundcloud:tracks:308946187
+    test_track_urn:
+      name: track_urn
+      in: path
+      description: SoundCloud Track id
+      required: true
+      style: simple
+      explode: false
+      schema:
+        type: string
+      example: soundcloud:tracks:1015448728
+    user_urn:
+      name: user_urn
+      in: path
+      description: SoundCloud User id
+      required: true
+      style: simple
+      explode: false
+      schema:
+        type: string
+      example: soundcloud:users:948745750
+    user_urn_to_follow:
+      name: user_urn
+      in: path
+      description: SoundCloud User id
+      required: true
+      style: simple
+      explode: false
+      schema:
+        type: string
+      example: soundcloud:users:743372812
+  examples:
+    Activities:
+      value:
+        collection:
+        - type: track
+          created_at: 2020/10/12 12:03:00 +0000
+          origin:
+            $ref: "#/components/examples/Track/value"
+        - type: playlist
+          created_at: 2020/10/12 12:02:44 +0000
+          origin:
+            $ref: "#/components/examples/Playlist/value"
+        next_href: https://api.soundcloud.com/me/activities?limit=10&cursor=00000
+        future_href: https://api.soundcloud.com/me/activities?limit=10&cursor=000001
+    CreateUpdatePlaylistRequest:
+      value:
+        playlist:
+          title: Test Auto-created Playlist
+          description: Playlist for test purposes
+          sharing: private
+          tracks:
+          - urn: soundcloud:tracks:219787221
+          - urn: soundcloud:tracks:783019264
+          - urn: soundcloud:tracks:870073492
+    CreateUpdatePlaylistFormRequest:
+      value:
+        playlist[title]: Test drum sample
+        playlist[sharing]: private
+        playlist[description]: Public-api test sample upload
+    TrackDataRequest:
+      value:
+        track[title]: Test drum sample
+        track[artist]: "Metro Boomin, The Weeknd, 21 Savage"
+        track[asset_data]: <binary string>
+        track[permalink]: test-drum-sample
+        track[sharing]: private
+        track[embeddable_by]: me
+        track[purchase_url]: null
+        track[description]: Public-api test sample upload
+        track[genre]: Pop
+        track[tag_list]: null
+        track[label_name]: null
+        track[release]: null
+        track[release_date]: 2021-02-18T00:00:00.000Z
+        track[streamable]: true
+        track[downloadable]: false
+        track[license]: no-rights-reserved
+        track[commentable]: true
+        track[isrc]: null
+        track[artwork_data]: null
+    Comment:
+      value:
+        body: comment body
+        created_at: 2007/09/11 15:40:24 +0000
+        urn: soundcloud:comments:1234
+        kind: comment
+        timestamp: 4960
+        track_urn: soundcloud:tracks:123456
+        uri: https://api.soundcloud.com/comments/1234
+        user:
+          urn: souncloud:users:12345
+          kind: user
+          permalink: permalink
+          username: user name
+          last_modified: 2017/04/10 14:48:03 +0000
+          uri: https://api.soundcloud.com/users/12345
+          permalink_url: https://soundcloud.com/permalink
+          avatar_url: https://i1.sndcdn.com/avatars-large.jpg
+          followers_count: 138
+          followings_count: 172
+          public_favorites_count: 5
+          reposts_count: 0
+        user_urn: soundcloud:users:12345
+    Comments:
+      value:
+        collection:
+          $ref: "#/components/examples/Comment/value"
+        next_href: https://api.soundcloud.com/collection?page_size=10&cursor=1234567
+    Playlist:
+      value:
+        artwork_url: ""
+        created_at: 2020/07/16 16:09:54 +0000
+        description: null
+        downloadable: true
+        duration: 11000
+        ean: null
+        embeddable_by: all
+        genre: ""
+        urn: soundcloud:playlists:12345
+        kind: playlist
+        label: null
+        label_id: null
+        label_name: null
+        last_modified: 2020/09/08 09:13:00 +0000
+        license: all-rights-reserved
+        likes_count: 0
+        permalink: permalink
+        permalink_url: https://soundcloud.com/userPermalink/sets/permalink
+        playlist_type: ""
+        purchase_title: null
+        purchase_url: null
+        release: null
+        release_day: null
+        release_month: null
+        release_year: null
+        sharing: public
+        streamable: true
+        tag_list: ""
+        tags: ""
+        title: permalink
+        track_count: 2
+        tracks:
+          allOf:
+          - $ref: "#/components/examples/Track/value"
+        tracks_uri: https://api.soundcloud.com/playlists/soundcloud:playlists:12345/tracks
+        type: ""
+        uri: https://api.soundcloud.com/playlists/soundcloud:playlists:12345
+        user:
+          $ref: "#/components/examples/User/value"
+        user_id: 1234
+    SystemPlaylist:
+      value:
+        kind: system-playlist
+        urn: soundcloud:system-playlists:track-stations:2287580618
+        title: Track station
+        description: Related tracks
+        playlist_type: PLAYLIST
+        permalink: track-stations:2287580618
+        permalink_url: https://soundcloud.com/discover/sets/track-stations:2287580618
+        last_updated: 2017-06-29T20:54:22.000Z
+        tracking_feature_name: track-stations
+        track_count: 1
+        query_urn: soundcloud:queries:abc
+        tracks:
+        - $ref: "#/components/examples/Track/value"
+    SystemPlaylists:
+      value:
+        collection:
+          $ref: "#/components/examples/SystemPlaylist/value"
+        next_href: https://api.soundcloud.com/collection?page_size=10&cursor=1234567
+    SystemPlaylistsArray:
+      description: "Deprecated, use SystemPlaylists instead."
+      value:
+        $ref: "#/components/examples/SystemPlaylist/value"
+    Playlists:
+      value:
+        collection:
+          $ref: "#/components/examples/Playlist/value"
+        next_href: https://api.soundcloud.com/collection?page_size=10&cursor=1234567
+    PlaylistsArray:
+      description: "Deprecated, use Playlists instead."
+      value:
+        $ref: "#/components/examples/Playlist/value"
+    Streams:
+      value:
+        hls_aac_160_url: https://api.soundcloud.com/tracks/urn/streams/uuid/
+        hls_mp3_128_url: https://api.soundcloud.com/tracks/urn/streams/uuid/
+        preview_mp3_128_url: https://api.soundcloud.com/tracks/urn/streams/uuid/
+    Track:
+      value:
+        kind: track
+        artwork_url: https://i1.sndcdn.com/artworks-large.jpg
+        available_country_codes: null
+        bpm: null
+        comment_count: 4
+        commentable: true
+        created_at: 2019/01/15 15:40:49 +0000
+        description: null
+        download_count: 0
+        download_url: https://api.soundcloud.com/tracks/1234/download
+        downloadable: false
+        duration: 40000
+        embeddable_by: all
+        favoritings_count: 271
+        genre: Rock
+        urn: soundcloud:tracks:1234
+        isrc: null
+        key_signature: null
+        label_name: some label
+        license: all-rights-reserved
+        metadata_artist: "Metro Boomin, The Weeknd, 21 Savage"
+        permalink_url: https://soundcloud.com/userPermalink/trackPermalink
+        playback_count: 8027
+        purchase_title: null
+        purchase_url: null
+        release: null
+        release_day: 22
+        release_month: 8
+        release_year: 2019
+        reposts_count: 18
+        secret_uri: null
+        sharing: public
+        stream_url: https://api.soundcloud.com/tracks/1234/stream
+        streamable: true
+        tag_list: ""
+        title: Some title
+        uri: https://api.soundcloud.com/tracks/1234
+        user:
+          $ref: "#/components/examples/User/value"
+        user_favorite: true
+        user_playback_count: 1
+        waveform_url: https://wave.sndcdn.com/someString.png
+        access: playable
+        reveal_stats: true
+        reveal_comments: true
+        station_urn: soundcloud:system-playlists:track-stations:1234
+    Tracks:
+      value:
+        collection:
+          $ref: "#/components/examples/Track/value"
+        next_href: https://api.soundcloud.com/collection?page_size=10&cursor=1234567
+    TracksList:
+      description: "Deprecated, use Tracks instead."
+      value:
+        $ref: "#/components/examples/Track/value"
+    User:
+      value:
+        avatar_url: https://i1.sndcdn.com/avatars.jpg
+        city: City
+        country: Country
+        created_at: 2018/01/01 12:08:25 +0000
+        description: null
+        discogs_name: null
+        first_name: First_name
+        followers_count: 0
+        followings_count: 0
+        full_name: Full Name
+        urn: soundcloud:users:12345
+        kind: user
+        last_modified: 2020/01/03 12:08:25 +0000
+        last_name: Last_name
+        myspace_name: null
+        permalink: permalink
+        permalink_url: https://soundcloud.com/permalink
+        plan: Free
+        playlist_count: 3
+        public_favorites_count: 20
+        reposts_count: 0
+        station_urn: soundcloud:system-playlists:artist-stations:12345
+        subscriptions:
+        - product:
+            id: some-id
+            name: some.name
+        track_count: 0
+        upload_seconds_left: 10800
+        uri: https://api.soundcloud.com/users/1234
+        username: some.user
+        website: null
+        website_title: null
+    Users:
+      value:
+        collection:
+          $ref: "#/components/examples/User/value"
+        next_href: https://api.soundcloud.com/collection?page_size=10&cursor=1234567
+    WebProfiles:
+      value:
+      - created_at: 1995/10/20 12:10:39 +0000
+        id: 1234
+        urn: soundcloud:users:1234
+        kind: web-profile
+        service: facebook
+        title: my facebook
+        url: http://facebook.com
+        username: username
+    Success:
+      value:
+        status: 200 - OK
+    Successful:
+      value:
+        status: 200 - Successful
+    BadRequest:
+      value:
+        code: 400
+        message: "Detailed message of errors, when available"
+        link: https://developers.soundcloud.com/docs/api/explorer/open-api
+    Unauthorized:
+      value:
+        code: 401
+        message: "Detailed message of errors, when available"
+        link: https://developers.soundcloud.com/docs/api/explorer/open-api
+    Forbidden:
+      value:
+        code: 403
+        message: "Detailed message of errors, when available"
+        link: https://developers.soundcloud.com/docs/api/explorer/open-api
+    NotFound:
+      value:
+        code: 404
+        message: "Detailed message of errors, when available"
+        link: https://developers.soundcloud.com/docs/api/explorer/open-api
+    UnprocessableEntity:
+      value:
+        code: 422
+        message: "Detailed message of errors, when available"
+        link: https://developers.soundcloud.com/docs/api/explorer/open-api
+    TooManyRequests:
+      value:
+        code: 429
+        message: "Detailed message of errors, when available"
+        spam_warning_urn: soundcloud:spam-warnings:1
+        link: https://developers.soundcloud.com/docs/api/rate-limits#errors
+    OK:
+      value:
+        status: Status(200) - OK
+  securitySchemes:
+    AuthHeader:
+      type: apiKey
+      description: "The string \"OAuth\" followed by the user’s token: OAuth ACCESS_TOKEN.\
+        \ Obtained in oAuth2.1 flow"
+      name: Authorization
+      in: header
+      x-ballerina-name: authorization
+    oAuth2_1:
+      type: oauth2
+      description: "This API uses OAuth2.1 with Authorization Code flow, Client Credential\
+        \ flow. When registering your app, for it to work with Swagger UI specify\
+        \ redirect url as https://developers.soundcloud.com/docs/api/explorer/oauth2-redirect.html.\
+        \ [More info](https://developers.soundcloud.com/docs/api/guide#authentication)"
+      flows:
+        clientCredentials:
+          tokenUrl: https://secure.soundcloud.com/oauth/token
+          scopes: {}
+        authorizationCode:
+          authorizationUrl: https://secure.soundcloud.com/authorize
+          tokenUrl: https://secure.soundcloud.com/oauth/token
+          refreshUrl: https://secure.soundcloud.com/oauth/token
+          scopes: {}

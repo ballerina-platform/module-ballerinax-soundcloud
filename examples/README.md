@@ -2,13 +2,14 @@
 
 The `ballerinax/soundcloud` connector provides practical examples illustrating usage in various scenarios.
 
-[//]: # (TODO: Add examples)
-1. 
-2. 
+1. [Genre playlist builder](./genre_playlist_builder/genre_playlist_builder.md) - Search tracks of a genre, collect them into a new playlist and read the playlist back.
+2. [Track engagement workflow](./track_engagement_workflow/track_engagement_workflow.md) - Review a track's likes and comments, then like and comment on it.
 
 ## Prerequisites
 
-[//]: # (TODO: Add prerequisites)
+1. A SoundCloud application with a client ID and client secret, and an access token for it, from [SoundCloud for Developers](https://soundcloud.com/you/apps).
+
+2. A `Config.toml` file in the example directory with the values described in the example's documentation.
 
 ## Running an example
 
